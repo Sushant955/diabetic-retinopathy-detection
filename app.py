@@ -2,14 +2,19 @@ import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
+import gdown
+import os
 
 st.title("Diabetic Retinopathy Detection")
 
-@st.cache_resource
-def load_model():
-    return tf.keras.models.load_model("dr_detection_model.keras")
+# Download model from Google Drive
+model_path = "dr_model.keras"
 
-model = load_model()
+if not os.path.exists(model_path):
+    url = "https://drive.google.com/uc?id=1oKj-DjI3Y2CdvIeAC3YgpXMYZLhI9jn0"
+    gdown.download(url, model_path, quiet=False)
+
+model = tf.keras.models.load_model(model_path)
 
 classes = ["No_DR", "Mild", "Moderate", "Severe", "Proliferate_DR"]
 
