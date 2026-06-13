@@ -25,19 +25,41 @@ if not os.path.exists(model_path) or os.path.getsize(model_path) == 0:
     st.error("❌ Model file is missing or corrupted. Please try again or check the download link.")
     st.stop()
 
-# ✅ Load model with error handling - FIXED VERSION COMPATIBILITY
-try:
-    # Use safe_mode=False to handle version compatibility issues
-    model = tf.keras.models.load_model(model_path, safe_mode=False)
-except Exception as e:
+# ✅ Load model with improved error handling
+def load_model_with_fallback():
+    """Try multiple approaches to load the model with version compatibility"""
     try:
-        # Fallback: Try loading with custom_object_scope
-        with tf.keras.utils.custom_object_scope({}):
-            model = tf.keras.models.load_model(model_path)
-    except Exception as e2:
-        st.error(f"❌ Failed to load model: {str(e2)}")
-        st.info("💡 Try updating TensorFlow: pip install --upgrade tensorflow")
-        st.stop()
+        # First attempt: Direct load with compile=False to skip potential issues
+        model = tf.keras.models.load_model(model_path, compile=False)
+        return model
+    except Exception as e1:
+        st.warning(f"⚠️ Standard load failed: {str(e1)[:100]}... Trying alternative method...")
+        try:
+            # Second attempt: Load with custom objects
+            model = tf.keras.models.load_model(
+                model_path,
+                custom_objects=None,
+                compile=False
+            )
+            return model
+        except Exception as e2:
+            st.warning(f"⚠️ Custom load failed. Attempting h5 conversion...")
+            try:
+                # Third attempt: Try loading as h5 if it's actually an h5 file
+                model = tf.keras.models.load_model(model_path.replace('.keras', '.h5'), compile=False)
+                return model
+            except Exception as e3:
+                raise Exception(f"All model loading attempts failed:\n1. {str(e1)}\n2. {str(e2)}\n3. {str(e3)}")
+
+try:
+    model = load_model_with_fallback()
+except Exception as e:
+    st.error(f"❌ Failed to load model: {str(e)}")
+    st.info("💡 Solutions:\n"
+            "1. Update TensorFlow: `pip install --upgrade tensorflow`\n"
+            "2. Ensure model file is not corrupted\n"
+            "3. Check that the download link is still valid")
+    st.stop()
 
 # ✅ UI Configuration
 st.title("Diabetic Retinopathy Detection")
