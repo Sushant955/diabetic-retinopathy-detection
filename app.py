@@ -4,6 +4,8 @@ import numpy as np
 from PIL import Image
 import gdown
 import os
+import warnings
+warnings.filterwarnings('ignore')
 
 # ✅ Model path
 model_path = "dr_model.keras"
@@ -23,13 +25,19 @@ if not os.path.exists(model_path) or os.path.getsize(model_path) == 0:
     st.error("❌ Model file is missing or corrupted. Please try again or check the download link.")
     st.stop()
 
-# ✅ Load model with error handling
+# ✅ Load model with error handling - FIXED VERSION COMPATIBILITY
 try:
-    model = tf.keras.models.load_model(model_path)
+    # Use safe_mode=False to handle version compatibility issues
+    model = tf.keras.models.load_model(model_path, safe_mode=False)
 except Exception as e:
-    st.error(f"❌ Failed to load model: {str(e)}")
-    st.info("💡 The model file may be corrupted. Try clearing your cache and restarting the app.")
-    st.stop()
+    try:
+        # Fallback: Try loading with custom_object_scope
+        with tf.keras.utils.custom_object_scope({}):
+            model = tf.keras.models.load_model(model_path)
+    except Exception as e2:
+        st.error(f"❌ Failed to load model: {str(e2)}")
+        st.info("💡 Try updating TensorFlow: pip install --upgrade tensorflow")
+        st.stop()
 
 # ✅ UI Configuration
 st.title("Diabetic Retinopathy Detection")
