@@ -5,6 +5,7 @@ from PIL import Image
 import gdown
 import os
 import warnings
+
 warnings.filterwarnings('ignore')
 
 # ✅ Model path
@@ -27,7 +28,9 @@ if not os.path.exists(model_path) or os.path.getsize(model_path) == 0:
 
 # ✅ Load model with improved error handling
 def load_model_with_fallback():
-    """Try multiple approaches to load the model with version compatibility"""
+    """
+    Try multiple approaches to load the model with version compatibility
+    """
     try:
         # First attempt: Direct load with compile=False to skip potential issues
         model = tf.keras.models.load_model(model_path, compile=False)
@@ -45,7 +48,7 @@ def load_model_with_fallback():
         except Exception as e2:
             st.warning(f"⚠️ Custom load failed. Attempting h5 conversion...")
             try:
-                # Third attempt: Try loading as h5 if it's actually an h5 file
+                # Third attempt: Try loading as h5 if file is actually h5
                 model = tf.keras.models.load_model(model_path.replace('.keras', '.h5'), compile=False)
                 return model
             except Exception as e3:
@@ -53,67 +56,57 @@ def load_model_with_fallback():
 
 try:
     model = load_model_with_fallback()
+    st.success("✅ Model loaded successfully!")
 except Exception as e:
     st.error(f"❌ Failed to load model: {str(e)}")
-    st.info("💡 Solutions:\n"
-            "1. Update TensorFlow: `pip install --upgrade tensorflow`\n"
-            "2. Ensure model file is not corrupted\n"
-            "3. Check that the download link is still valid")
+    st.info("""
+    **💡 Solutions:**
+    1. Update TensorFlow: `pip install --upgrade tensorflow`
+    2. Update to TensorFlow 2.13+: `pip install tensorflow>=2.13`
+    3. Ensure model file is not corrupted
+    4. Check that the download link is still valid
+    """)
     st.stop()
 
-# ✅ UI Configuration
+# --- UI PART ---
 st.title("Diabetic Retinopathy Detection")
 st.markdown("Upload an eye fundus image to detect diabetic retinopathy severity level")
 
-# Class labels
 classes = ["No_DR", "Mild", "Moderate", "Severe", "Proliferative_DR"]
 
-# File uploader (added jpeg support)
 uploaded_file = st.file_uploader("Upload Eye Image", type=["jpg", "png", "jpeg"])
 
-if uploaded_file is not None:
-    # Display uploaded image
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+if uploaded_file:
+    try:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Preprocess image
-    img = image.resize((224, 224))
-    
-    # Convert to RGB if necessary (handles grayscale images)
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
-    
-    img = np.array(img) / 255.0
-    img = np.expand_dims(img, axis=0)
+        img = image.resize((224, 224))
+        
+        # Convert to RGB if necessary (handles grayscale images)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        img = np.array(img) / 255.0
+        img = np.expand_dims(img, axis=0)
 
-    # Make prediction
-    with st.spinner("🔍 Analyzing image..."):
-        prediction = model.predict(img, verbose=0)
-    predicted_class = np.argmax(prediction)
-    confidence = np.max(prediction) * 100
-
-    # Display results
-    st.subheader("Prediction Results")
-    col1, col2 = st.columns(2)
+        with st.spinner("Analyzing image..."):
+            prediction = model.predict(img, verbose=0)
+        
+        result = classes[np.argmax(prediction)]
+        confidence = np.max(prediction) * 100
+        
+        st.success("✅ Analysis Complete!")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Detected Class", result)
+        with col2:
+            st.metric("Confidence", f"{confidence:.2f}%")
+        
+        st.subheader("All Predictions:")
+        for i, class_name in enumerate(classes):
+            st.write(f"**{class_name}**: {prediction[0][i]*100:.2f}%")
     
-    with col1:
-        st.metric("Detected Class", classes[predicted_class])
-    with col2:
-        st.metric("Confidence", f"{confidence:.2f}%")
-
-    # Detailed results with severity indicators
-    if predicted_class == 0:
-        st.success("✅ No Diabetic Retinopathy Detected")
-    elif predicted_class == 1:
-        st.warning("⚠️ Mild Diabetic Retinopathy Detected")
-    elif predicted_class == 2:
-        st.warning("⚠️ Moderate Diabetic Retinopathy Detected")
-    elif predicted_class == 3:
-        st.error("❌ Severe Diabetic Retinopathy Detected")
-    else:
-        st.error("❌ Proliferative Diabetic Retinopathy Detected")
-    
-    # Display prediction probabilities
-    st.subheader("All Predictions")
-    for i, class_name in enumerate(classes):
-        st.write(f"{class_name}: {prediction[0][i] * 100:.2f}%")
+    except Exception as e:
+        st.error(f"❌ Error processing image: {str(e)}")
