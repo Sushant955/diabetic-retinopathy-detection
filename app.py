@@ -8,13 +8,28 @@ import os
 # ✅ Model path
 model_path = "dr_model.keras"
 
-# ✅ Download model if not exists (removed fuzzy=True to avoid errors)
+# ✅ Download model if not exists
 if not os.path.exists(model_path):
+    st.info("📥 Downloading model... this may take a minute")
     url = "https://drive.google.com/uc?id=1oKj-DjI3Y2CdvIeAC3YgpXMYZLhI9jn0"
-    gdown.download(url, model_path, quiet=False)
+    try:
+        gdown.download(url, model_path, quiet=False)
+    except Exception as e:
+        st.error(f"❌ Failed to download model: {str(e)}")
+        st.stop()
 
-# ✅ Load model
-model = tf.keras.models.load_model(model_path)
+# ✅ Verify file exists and has content
+if not os.path.exists(model_path) or os.path.getsize(model_path) == 0:
+    st.error("❌ Model file is missing or corrupted. Please try again or check the download link.")
+    st.stop()
+
+# ✅ Load model with error handling
+try:
+    model = tf.keras.models.load_model(model_path)
+except Exception as e:
+    st.error(f"❌ Failed to load model: {str(e)}")
+    st.info("💡 The model file may be corrupted. Try clearing your cache and restarting the app.")
+    st.stop()
 
 # ✅ UI Configuration
 st.title("Diabetic Retinopathy Detection")
@@ -42,7 +57,8 @@ if uploaded_file is not None:
     img = np.expand_dims(img, axis=0)
 
     # Make prediction
-    prediction = model.predict(img)
+    with st.spinner("🔍 Analyzing image..."):
+        prediction = model.predict(img, verbose=0)
     predicted_class = np.argmax(prediction)
     confidence = np.max(prediction) * 100
 
