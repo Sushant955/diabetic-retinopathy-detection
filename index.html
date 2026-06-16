@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Diabetic Retinopathy Detection</title>
 
+<!-- ✅ Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body {
     font-family: 'Segoe UI', sans-serif;
@@ -20,14 +23,11 @@ header {
 .container {
     margin: 30px auto;
     width: 90%;
-    max-width: 650px;
+    max-width: 700px;
     background: white;
     padding: 20px;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-}
-input, button {
-    margin-top: 15px;
 }
 button {
     padding: 10px 20px;
@@ -36,6 +36,7 @@ button {
     color: white;
     border-radius: 6px;
     cursor: pointer;
+    margin-top: 10px;
 }
 button:hover {
     background: #0056b3;
@@ -53,10 +54,9 @@ img {
 .success { background: #d4edda; }
 .warning { background: #fff3cd; }
 .danger { background: #f8d7da; }
-.metrics {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 15px;
+
+canvas {
+    margin-top: 20px;
 }
 footer {
     margin-top: 20px;
@@ -78,13 +78,15 @@ footer {
 <h3>Upload Fundus Image</h3>
 <input type="file" id="imageInput" accept="image/*">
 <br>
-
 <button onclick="predict()">Analyze</button>
 
 <img id="preview"/>
 
 <div id="result"></div>
-<div id="probabilities"></div>
+
+<!-- 📊 Charts -->
+<canvas id="confidenceChart"></canvas>
+<canvas id="probChart"></canvas>
 
 </div>
 
@@ -94,12 +96,12 @@ footer {
 
 <script>
 const classes = ["No_DR", "Mild", "Moderate", "Severe", "Proliferative_DR"];
+let probChart, confidenceChart;
 
 function predict() {
     const file = document.getElementById("imageInput").files[0];
     const preview = document.getElementById("preview");
     const resultDiv = document.getElementById("result");
-    const probDiv = document.getElementById("probabilities");
 
     if (!file) {
         resultDiv.innerHTML = "Please upload an image.";
@@ -151,22 +153,40 @@ function predict() {
     resultDiv.innerHTML = `
     <div class="result-box ${style}">
         <h3>Analysis Complete</h3>
-        <div class="metrics">
-            <div><strong>Class:</strong><br>${resultClass}</div>
-            <div><strong>Confidence:</strong><br>${confidence}%</div>
-        </div>
-        <p><strong>Diagnosis:</strong> ${message}</p>
+        <p><b>Class:</b> ${resultClass}</p>
+        <p><b>Confidence:</b> ${confidence}%</p>
+        <p><b>Diagnosis:</b> ${message}</p>
     </div>
     `;
 
-    let probHTML = "<h3>All Predictions</h3>";
-    classes.forEach((cls, i) => {
-        probHTML += `<p><b>${cls}</b>: ${(probs[i]*100).toFixed(2)}%</p>`;
+    // Destroy old charts
+    if (probChart) probChart.destroy();
+    if (confidenceChart) confidenceChart.destroy();
+
+    // 📊 Bar Chart
+    probChart = new Chart(document.getElementById("probChart"), {
+        type: 'bar',
+        data: {
+            labels: classes,
+            datasets: [{
+                label: 'Probability (%)',
+                data: probs.map(p => (p * 100).toFixed(2))
+            }]
+        }
     });
 
-    probDiv.innerHTML = probHTML;
+    // 🍩 Doughnut Chart
+    confidenceChart = new Chart(document.getElementById("confidenceChart"), {
+        type: 'doughnut',
+        data: {
+            labels: ["Confidence", "Remaining"],
+            datasets: [{
+                data: [confidence, 100 - confidence]
+            }]
+        }
+    });
 }
 </script>
 
 </body>
-  </html>
+</html>
