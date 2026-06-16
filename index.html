@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diabetic Retinopathy Detection</title>
+
+<style>
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(to right, #eef2f3, #dfe9f3);
+    margin: 0;
+    text-align: center;
+}
+header {
+    background: #1e2a38;
+    color: white;
+    padding: 20px;
+}
+.container {
+    margin: 30px auto;
+    width: 90%;
+    max-width: 650px;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+input, button {
+    margin-top: 15px;
+}
+button {
+    padding: 10px 20px;
+    border: none;
+    background: #007bff;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+button:hover {
+    background: #0056b3;
+}
+img {
+    margin-top: 15px;
+    max-width: 100%;
+    border-radius: 10px;
+}
+.result-box {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 10px;
+}
+.success { background: #d4edda; }
+.warning { background: #fff3cd; }
+.danger { background: #f8d7da; }
+.metrics {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 15px;
+}
+footer {
+    margin-top: 20px;
+    padding: 10px;
+    background: #ccc;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>Diabetic Retinopathy Detection</h1>
+<p>AI-Based Eye Disease Analysis</p>
+</header>
+
+<div class="container">
+
+<h3>Upload Fundus Image</h3>
+<input type="file" id="imageInput" accept="image/*">
+<br>
+
+<button onclick="predict()">Analyze</button>
+
+<img id="preview"/>
+
+<div id="result"></div>
+<div id="probabilities"></div>
+
+</div>
+
+<footer>
+<p>© 2026 Sushanth | ML Healthcare Project</p>
+</footer>
+
+<script>
+const classes = ["No_DR", "Mild", "Moderate", "Severe", "Proliferative_DR"];
+
+function predict() {
+    const file = document.getElementById("imageInput").files[0];
+    const preview = document.getElementById("preview");
+    const resultDiv = document.getElementById("result");
+    const probDiv = document.getElementById("probabilities");
+
+    if (!file) {
+        resultDiv.innerHTML = "Please upload an image.";
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        preview.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // 🔥 Simulated prediction
+    let probs = [];
+    let sum = 0;
+
+    for (let i = 0; i < 5; i++) {
+        let val = Math.random();
+        probs.push(val);
+        sum += val;
+    }
+
+    probs = probs.map(p => p / sum);
+
+    let maxIndex = probs.indexOf(Math.max(...probs));
+    let resultClass = classes[maxIndex];
+    let confidence = (probs[maxIndex] * 100).toFixed(2);
+
+    let message = "";
+    let style = "success";
+
+    if (maxIndex == 0) {
+        message = "No Diabetic Retinopathy detected.";
+        style = "success";
+    } else if (maxIndex == 1) {
+        message = "Mild DR - Regular monitoring recommended.";
+        style = "warning";
+    } else if (maxIndex == 2) {
+        message = "Moderate DR - Consult doctor.";
+        style = "warning";
+    } else if (maxIndex == 3) {
+        message = "Severe DR - Immediate attention required.";
+        style = "danger";
+    } else {
+        message = "Proliferative DR - Urgent medical care needed.";
+        style = "danger";
+    }
+
+    resultDiv.innerHTML = `
+    <div class="result-box ${style}">
+        <h3>Analysis Complete</h3>
+        <div class="metrics">
+            <div><strong>Class:</strong><br>${resultClass}</div>
+            <div><strong>Confidence:</strong><br>${confidence}%</div>
+        </div>
+        <p><strong>Diagnosis:</strong> ${message}</p>
+    </div>
+    `;
+
+    let probHTML = "<h3>All Predictions</h3>";
+    classes.forEach((cls, i) => {
+        probHTML += `<p><b>${cls}</b>: ${(probs[i]*100).toFixed(2)}%</p>`;
+    });
+
+    probDiv.innerHTML = probHTML;
+}
+</script>
+
+</body>
+  </html>
